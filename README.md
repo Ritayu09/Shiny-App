@@ -12,7 +12,6 @@ The app can also be used to perform forward, backward and stepwise regression by
 This shiny app can be run by using the running the following code in R:
 
 ```
-if (!require('shiny')) install.packages('shiny')
 library(shiny)
 runGitHub("Shiny-App-CarsData","Ritayu09")
 ```
