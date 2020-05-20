@@ -7,3 +7,12 @@ The app provides scatterplot for visualizing mileage of car with respect to sele
 Correlation plot can also be visualized to understand the underlying relationship between variables to help in variable selection. 
 
 The app can also be used to perform forward, backward and stepwise regression by selecting and deselecting variables from selection window provided on the app.
+
+
+This shiny app can be run by using the running the following code in R:
+
+```
+if (!require('shiny')) install.packages('shiny')
+library(shiny)
+runGitHub("Shiny-App-CarsData","Ritayu09")
+```
