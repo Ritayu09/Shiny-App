@@ -9,7 +9,7 @@ Correlation plot can also be visualized to understand the underlying relationshi
 The app can also be used to perform forward, backward and stepwise regression by selecting and deselecting variables from selection window provided on the app.
 
 
-This shiny app can be run by using the running the following code in R:
+This shiny app can be run by running the following code in R:
 
 ```
 library(shiny)
