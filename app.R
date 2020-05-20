@@ -1,0 +1,146 @@
+library(shiny)
+library(MPV)
+library(ggimage)
+library(ggplot2)
+library(corrplot)
+library(RColorBrewer)
+
+ui <- shinyUI(fluidPage(
+  
+  # Application title
+  titlePanel("Car Dataset Analysis"),
+  
+  # Sidebar with a slider input for number of bins
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("Car.Char", "Car Characteristic:",
+                  c("Displacement (cubic in)" = "x1",
+                    "Horsepower (ft-lb)" = "x2",
+                    "Torque (ft-lb)" = "x3",
+                    "Compression Ratio" = "x4",
+                    "Rear axle ratio" = "x5",
+                    "Carburetor" = "x6",
+                    "Overall Length (in)" = "x8",
+                    "Width (in)" = "x9",
+                    "Weight (lb)" = "x10")),
+      checkboxInput('simple_regression','Run Simple Linear Regression'),
+      checkboxInput("pred_type", 'Run Multiple Linear Regression'),
+      helpText("Note: By default, Multiple Linear Regression will include the variable selected in
+               dropdown above."),
+      checkboxInput("corr", 'View Correlation Plot'),
+      conditionalPanel(
+        condition = "input.pred_type == true",
+        uiOutput('predictors')
+      ),
+      conditionalPanel(
+        condition = "input.pred_type == false",
+      )
+    ),
+    
+    # Show a plot of the generated distribution
+    mainPanel(
+      conditionalPanel(
+        condition = 'input.corr==false',
+        plotOutput("main_plot"),        
+        conditionalPanel(
+          condition = 'input.simple_regression==true',
+          h4("Simple Linear Regression Summary"),
+          verbatimTextOutput("simple_summary")
+        ),
+        conditionalPanel(
+          condition = 'input.pred_type==true',
+          h4("Multiple Linear Regression Summary"),
+          verbatimTextOutput("multiple_summary")
+        )
+      ),
+      conditionalPanel(
+        condition = 'input.corr==true',
+        h4("Correlation Plot"),
+        plotOutput("corr")
+      )
+    )
+  )
+))
+
+server <- shinyServer(function(input, output) {
+  
+  # data
+  data <- table.b3
+  data$image <- "Blue Car.png"
+  data$image[data$x11 == 0] <- "Red Car.png"
+  data$Type <- "Automatic"
+  data$Type[data$x11 == 0] <- "Manual"
+  
+  data2 <- data.frame(data)
+  
+  data$x6 <- factor(data$x6)
+  data$x7 <- factor(data$x7)
+  data$x11 <- factor(data$x11)
+  
+  choices <- c("Displacement (cubic in)" = "x1",
+               "Horsepower (ft-lb)" = "x2",
+               "Torque (ft-lb)" = "x3",
+               "Compression Ratio" = "x4",
+               "Rear axle ratio" = "x5",
+               "Carburetor" = "x6",
+               "Overall Length (in)" = "x8",
+               "Width (in)" = "x9",
+               "Weight (lb)" = "x10",
+               "Number of gears" = "x7",
+               "Transmission Type" = "x11")
+  
+  
+  output$main_plot <- renderPlot({
+    
+    
+    #plotTitle <- input$title
+    ggplot(data2, aes(x = data2[,input$Car.Char], y)) + geom_point(aes(color = Type)) + scale_color_manual(values = c("blue", "red")) + geom_image(aes(image=image), size=data2$x7/75) +
+      scale_x_continuous(breaks = unique(as.integer(seq(min(data2[,input$Car.Char], na.rm = TRUE)-2, max(data2[,input$Car.Char], na.rm = TRUE)+2, by = (max(data2[,input$Car.Char], na.rm = TRUE)+2-min(data2[,input$Car.Char], na.rm = TRUE)+2)/10)))) +
+      scale_y_continuous(breaks = as.integer(seq(min(data2$y, na.rm = TRUE)-1, max(data2$y, na.rm = TRUE)+1, by = 5))) + 
+      xlab(names(choices)[choices == input$Car.Char]) + ylab("Miles/gallon") + 
+      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+            panel.background = element_blank(), axis.line = element_line(colour = "black"), plot.title = element_text(colour = "black", size = 20, face = "bold", hjust = 0.5), plot.caption = element_text(color = "black", size = 12, face="bold.italic"), plot.subtitle = element_text(size = 13, hjust = 0.5)) + 
+      labs(title = "Gasoline Mileage Performance",
+           subtitle = paste("Relation between mileage, car type, transmission speed and", names(choices)[choices == input$Car.Char]),
+           caption = "Size of car: Number of Gears: 3,4 or 5")
+  })
+  
+  output$predictors <- renderUI({
+    predx <- choices[!choices %in% input$Car.Char]
+    checkboxGroupInput("predx", "Choose Predictor Varaible(s)", predx)
+  })
+  
+  
+  output$simple_summary <-renderPrint({
+    df <- data.frame(data[,input$Car.Char])
+    names(df)[1] <- names(choices)[choices == input$Car.Char]
+    df$mileage <- data$y
+    lm.simple <- lm(mileage~., data = df)
+    summary(lm.simple)
+  })    
+  
+  output$multiple_summary <-renderPrint({
+    if (is.null(input$predx)) {
+      df <- data.frame(data[,input$Car.Char])
+      names(df)[1] <- names(choices)[choices == input$Car.Char]
+    } else {
+      df <- data[,names(data) %in% c(input$predx, input$Car.Char)]
+      for(i in 1:length(names(df))){
+        names(df)[i] = names(choices)[choices == names(df)[i]]
+      }
+    }
+    df$mileage <- data$y
+    lm.multiple <- lm(mileage~., data = df)
+    summary(lm.multiple)
+  })
+  
+  output$corr <- renderPlot({
+    df <- table.b3
+    names(df) <- c("mpg", "disp", "hp", "torque", "comp", "axle", "carb", "gear", "length", "width", "weight", "type")
+    corr_res <- cor(df, use = "complete.obs", method = "pearson")
+    corrplot.mixed(corr_res, upper = "color", number.cex = .8, tl.cex = 0.8)
+  })
+  
+})
+
+shinyApp(ui, server)
